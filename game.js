@@ -119,6 +119,9 @@ class Asteroid {
 }
 
 // ── Ship ──────────────────────────────────────────────────────────────────────
+const SHIELD_DURATION = 5;   // segundos que dura el escudo activo
+const SHIELD_RADIUS   = 22;  // radio del círculo de energía
+
 class Ship {
   constructor() { this.reset(); }
 
@@ -133,12 +136,17 @@ class Ship {
     this.invincible    = 3;
     this.shootCooldown = 0;
     this.dead          = false;
+
+    // power-ups por-nivel (extensible: añadir aquí futuros extras)
+    this.shieldTimer = 0;     // tiempo restante de escudo activo
+    this.shieldReady = true;  // disponible una vez por nivel
   }
 
   update(dt) {
     if (this.dead) return;
     if (this.invincible    > 0) this.invincible    -= dt;
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
+    if (this.shieldTimer   > 0) this.shieldTimer   -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = 260;  // px/s²
@@ -168,8 +176,31 @@ class Ship {
     return [new Bullet(ox, oy, this.angle)];
   }
 
+  get shieldActive() {
+    return this.shieldTimer > 0;
+  }
+
+  tryShield() {
+    if (!this.shieldReady || this.shieldActive || this.dead) return;
+    this.shieldTimer = SHIELD_DURATION;
+    this.shieldReady = false;
+  }
+
   draw() {
     if (this.dead) return;
+
+    if (this.shieldActive) {
+      const alpha = 0.4 + 0.3 * Math.abs(Math.sin(this.shieldTimer * 6));
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.strokeStyle = `rgba(80, 200, 255, ${alpha.toFixed(2)})`;
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, SHIELD_RADIUS, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Parpadeo durante invencibilidad de reaparición
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) return;
 
@@ -312,6 +343,11 @@ function update(dt) {
     bullets.push(...ship.tryShoot());
   }
 
+  // Activar escudo
+  if (pressed('KeyS')) {
+    ship.tryShield();
+  }
+
   ship.update(dt);
   bullets.forEach(b => b.update(dt));
   asteroids.forEach(a => a.update(dt));
@@ -340,10 +376,18 @@ function update(dt) {
   if (ship.invincible <= 0) {
     for (const a of asteroids) {
       if (dist(ship, a) < ship.radius + a.radius * 0.82) {
-        killShip();
+        if (ship.shieldActive) {
+          ship.shieldTimer = 0;
+          a.dead = true;
+          explode(a.x, a.y, a.size * 5);
+          asteroids.push(...a.split());
+        } else {
+          killShip();
+        }
         break;
       }
     }
+    asteroids = asteroids.filter(a => !a.dead);
   }
 
   // Nivel completado
@@ -374,6 +418,13 @@ function drawHUD() {
 
   ctx.textAlign = 'left';
   ctx.fillText(`SCORE  ${score}`, 14, 26);
+
+  const shieldLabel = ship.shieldActive ? 'ACTIVO' : ship.shieldReady ? 'LISTO' : '—';
+  ctx.font = '12px monospace';
+  ctx.fillStyle = ship.shieldActive ? '#50c8ff' : '#fff';
+  ctx.fillText(`ESCUDO: ${shieldLabel}`, 14, 46);
+  ctx.font = '15px monospace';
+  ctx.fillStyle = '#fff';
 
   ctx.textAlign = 'center';
   ctx.fillText(`NIVEL ${level}`, W / 2, 26);

@@ -33,6 +33,7 @@ Luego visita `http://localhost:3000`.
 | `←` `→`   | Rotar nave |
 | `↑`       | Propulsar  |
 | `Espacio` | Disparar   |
+| `S`       | Activar escudo temporal |
 
 ## Puntuación
 
@@ -47,3 +48,18 @@ Luego visita `http://localhost:3000`.
 - 3 vidas con invencibilidad temporal al reaparecer (parpadeo)
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
+- Escudo temporal activable (ver [Modificaciones](#modificaciones))
+
+## Modificaciones
+
+### Escudo Temporal
+
+Power-up defensivo activable manualmente. Rodea la nave con un círculo de energía azul que **absorbe un único impacto** de asteroide.
+
+- **Activación:** tecla `S`, en cualquier momento durante la partida.
+- **Duración:** ~5 segundos, o hasta recibir un golpe (lo que ocurra primero).
+- **Disponibilidad:** una vez por nivel — se recarga automáticamente al pasar de nivel.
+- **Al absorber un golpe:** el asteroide impactado se destruye (y se parte en fragmentos, si corresponde) sin sumar puntos; el escudo se consume y la nave no pierde vidas ni invencibilidad.
+- El HUD muestra el estado del escudo bajo el puntaje: `ESCUDO: LISTO` (disponible), `ESCUDO: ACTIVO` (protegiendo) o `ESCUDO: —` (agotado este nivel).
+
+El estado del escudo vive encapsulado en la clase `Ship` (`shieldReady`, `shieldTimer`, `tryShield()`), pensado como patrón reutilizable para futuros power-ups por-nivel sin necesidad de refactor.
