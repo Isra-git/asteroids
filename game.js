@@ -125,6 +125,15 @@ const SHIELD_RADIUS   = 22;  // radio del círculo de energía
 const TRIPLE_SHOT_DURATION = 8;      // segundos que dura el disparo triple
 const TRIPLE_SHOT_SPREAD   = 0.26;   // rad de separación entre balas laterales
 
+const SLOWMO_DURATION = 6;   // segundos que dura el slow motion
+const SLOWMO_FACTOR   = 0.5; // multiplicador de velocidad de asteroides
+
+// ── Panel HUD ─────────────────────────────────────────────────────────────────
+const PANEL_HEIGHT = 30;
+const PANEL_BG     = 'rgba(8, 12, 18, 0.82)';
+const PANEL_BORDER = 'rgba(255, 255, 255, 0.12)';
+const LABEL_COLOR  = '#8a97ab';
+
 class Ship {
   constructor() { this.reset(); }
 
@@ -145,6 +154,8 @@ class Ship {
     this.shieldReady = true;  // disponible una vez por nivel
     this.tripleTimer = 0;     // tiempo restante de disparo triple activo
     this.tripleReady = true;  // disponible una vez por nivel
+    this.slowmoTimer = 0;     // tiempo restante de slow motion activo
+    this.slowmoReady = true;  // disponible una vez por nivel
   }
 
   update(dt) {
@@ -153,6 +164,7 @@ class Ship {
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.shieldTimer   > 0) this.shieldTimer   -= dt;
     if (this.tripleTimer   > 0) this.tripleTimer   -= dt;
+    if (this.slowmoTimer   > 0) this.slowmoTimer   -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = 260;  // px/s²
@@ -198,6 +210,10 @@ class Ship {
     return this.tripleTimer > 0;
   }
 
+  get slowmoActive() {
+    return this.slowmoTimer > 0;
+  }
+
   tryShield() {
     if (!this.shieldReady || this.shieldActive || this.tripleActive || this.dead) return;
     this.shieldTimer = SHIELD_DURATION;
@@ -208,6 +224,12 @@ class Ship {
     if (!this.tripleReady || this.tripleActive || this.shieldActive || this.dead) return;
     this.tripleTimer = TRIPLE_SHOT_DURATION;
     this.tripleReady = false;
+  }
+
+  trySlowMo() {
+    if (!this.slowmoReady || this.slowmoActive || this.dead) return;
+    this.slowmoTimer = SLOWMO_DURATION;
+    this.slowmoReady = false;
   }
 
   draw() {
@@ -421,14 +443,20 @@ function update(dt) {
     bullets.push(...ship.tryShoot());
   }
 
-  // Activar escudo
+  // Activar slow motion
   if (pressed('KeyS')) {
+    ship.trySlowMo();
+  }
+
+  // Activar escudo
+  if (pressed('KeyD')) {
     ship.tryShield();
   }
 
   ship.update(dt);
   bullets.forEach(b => b.update(dt));
-  asteroids.forEach(a => a.update(dt));
+  const asteroidDt = ship.slowmoActive ? dt * SLOWMO_FACTOR : dt;
+  asteroids.forEach(a => a.update(asteroidDt));
   particles.forEach(p => p.update(dt));
   powerups.forEach(p => p.update(dt));
 
@@ -506,31 +534,60 @@ function drawLifeIcon(x, y) {
   ctx.restore();
 }
 
+function drawDivider(x) {
+  ctx.strokeStyle = PANEL_BORDER;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, 7);
+  ctx.lineTo(x, PANEL_HEIGHT - 7);
+  ctx.stroke();
+}
+
+function drawPowerStat(x, label, statusText, color, active, ready) {
+  ctx.fillStyle = active ? '#fff' : ready ? color : '#556070';
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText(`${label} ${statusText}`, x, PANEL_HEIGHT / 2);
+}
+
 function drawHUD() {
-  ctx.fillStyle = '#fff';
-  ctx.font = '15px monospace';
+  // Fondo del panel
+  ctx.fillStyle = PANEL_BG;
+  ctx.fillRect(0, 0, W, PANEL_HEIGHT);
+  ctx.strokeStyle = PANEL_BORDER;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, PANEL_HEIGHT - 0.5);
+  ctx.lineTo(W, PANEL_HEIGHT - 0.5);
+  ctx.stroke();
+
+  const midY = PANEL_HEIGHT / 2;
+  ctx.textBaseline = 'middle';
 
   ctx.textAlign = 'left';
-  ctx.fillText(`SCORE  ${score}`, 14, 26);
-
-  const shieldLabel = ship.shieldActive ? 'ACTIVO' : ship.shieldReady ? 'LISTO' : '—';
-  ctx.font = '12px monospace';
-  ctx.fillStyle = ship.shieldActive ? '#50c8ff' : '#fff';
-  ctx.fillText(`ESCUDO: ${shieldLabel}`, 14, 46);
-
-  const tripleLabel = ship.tripleActive ? 'ACTIVO' : ship.tripleReady ? 'BUSCAR ¤' : '—';
-  ctx.fillStyle = ship.tripleActive ? '#ffcc50' : '#fff';
-  ctx.fillText(`TRIPLE: ${tripleLabel}`, 14, 62);
-
-  ctx.font = '15px monospace';
+  ctx.font = 'bold 15px monospace';
   ctx.fillStyle = '#fff';
+  ctx.fillText(`SCORE ${score}`, 14, midY);
+  drawDivider(150);
 
   ctx.textAlign = 'center';
-  ctx.fillText(`NIVEL ${level}`, W / 2, 26);
+  ctx.fillText(`NIVEL ${level}`, 210, midY);
+  drawDivider(260);
 
+  ctx.textAlign = 'left';
+  const shieldLabel = ship.shieldActive ? 'ACTIVO' : ship.shieldReady ? 'DISPONIBLE' : '—';
+  const tripleLabel = ship.tripleActive ? 'ACTIVO' : ship.tripleReady ? 'BUSCAR' : '—';
+  const slowmoLabel = ship.slowmoActive ? 'ACTIVO' : ship.slowmoReady ? 'DISPONIBLE' : '—';
+
+  drawPowerStat(280, 'ESCUDO', shieldLabel, '#50c8ff', ship.shieldActive, ship.shieldReady);
+  drawDivider(410);
+  drawPowerStat(430, 'TRIPLE', tripleLabel, '#ffcc50', ship.tripleActive, ship.tripleReady);
+  drawDivider(560);
+  drawPowerStat(580, 'SLOWMO', slowmoLabel, '#7CFF9E', ship.slowmoActive, ship.slowmoReady);
+  drawDivider(710);
+
+  ctx.textBaseline = 'alphabetic';
   for (let i = 0; i < lives; i++)
-    drawLifeIcon(W - 16 - i * 22, 18);
-
+    drawLifeIcon(W - 20 - i * 22, midY);
 }
 
 function drawOverlay(title, sub) {

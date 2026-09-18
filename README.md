@@ -33,7 +33,8 @@ Luego visita `http://localhost:3000`.
 | `←` `→`   | Rotar nave |
 | `↑`       | Propulsar  |
 | `Espacio` | Disparar   |
-| `S`       | Activar escudo temporal |
+| `D`       | Activar escudo temporal |
+| `S`       | Activar slow motion |
 
 ## Puntuación
 
@@ -50,6 +51,7 @@ Luego visita `http://localhost:3000`.
 - Partículas de explosión al destruir asteroides
 - Escudo temporal activable (ver [Modificaciones](#modificaciones))
 - Power-up de disparo triple recogible al destruir asteroides (ver [Modificaciones](#modificaciones))
+- Slow motion activable que ralentiza los asteroides (ver [Modificaciones](#modificaciones))
 
 ## Modificaciones
 
@@ -57,11 +59,11 @@ Luego visita `http://localhost:3000`.
 
 Power-up defensivo activable manualmente. Rodea la nave con un círculo de energía azul que **absorbe un único impacto** de asteroide.
 
-- **Activación:** tecla `S`, en cualquier momento durante la partida.
+- **Activación:** tecla `D`, en cualquier momento durante la partida.
 - **Duración:** ~5 segundos, o hasta recibir un golpe (lo que ocurra primero).
 - **Disponibilidad:** una vez por nivel — se recarga automáticamente al pasar de nivel.
 - **Al absorber un golpe:** el asteroide impactado se destruye (y se parte en fragmentos, si corresponde) sin sumar puntos; el escudo se consume y la nave no pierde vidas ni invencibilidad.
-- El HUD muestra el estado del escudo bajo el puntaje: `ESCUDO: LISTO` (disponible), `ESCUDO: ACTIVO` (protegiendo) o `ESCUDO: —` (agotado este nivel).
+- El HUD muestra el estado del escudo: `ESCUDO LISTO` (disponible), `ESCUDO ACTIVO` (protegiendo) o `ESCUDO —` (agotado este nivel).
 
 El estado del escudo vive encapsulado en la clase `Ship` (`shieldReady`, `shieldTimer`, `tryShield()`), pensado como patrón reutilizable para futuros power-ups por-nivel sin necesidad de refactor.
 
@@ -74,6 +76,19 @@ Power-up ofensivo que se **recoge volando sobre él**, como en los shoot 'em up 
 - **Duración del efecto:** ~8 segundos tras recogerla.
 - **Disponibilidad:** máximo 1 cápsula por nivel. Mientras haya una en pantalla no aparecen más; en cuanto se recoge, expira o ya se usó ese nivel, tampoco vuelven a soltarse.
 - **Exclusión mutua:** no puede recogerse/activarse mientras el escudo temporal está activo, y viceversa — solo un power-up extra a la vez.
-- El HUD muestra el estado bajo el del escudo: `TRIPLE: BUSCAR ¤` (hay cápsulas disponibles este nivel), `TRIPLE: ACTIVO` (disparando en abanico) o `TRIPLE: —` (agotado este nivel).
+- El HUD muestra el estado: `TRIPLE BUSCAR` (hay cápsulas disponibles este nivel), `TRIPLE ACTIVO` (disparando en abanico) o `TRIPLE —` (agotado este nivel).
 
 Sigue el mismo patrón que el escudo (`tripleReady`, `tripleTimer`, `tryTripleShot()`), encapsulado en `Ship`; la única diferencia es el disparador: colisión nave↔`PowerUp` en vez de tecla.
+
+### Slow Motion
+
+Power-up activable manualmente que ralentiza todos los asteroides a la mitad de su velocidad, mientras la nave se mueve con normalidad. Muy útil en niveles avanzados con muchos asteroides en pantalla.
+
+- **Activación:** tecla `S`, en cualquier momento durante la partida.
+- **Duración:** ~6 segundos.
+- **Alcance del efecto:** solo afecta la velocidad de los asteroides; la nave y las balas mantienen su velocidad normal.
+- **Disponibilidad:** una vez por nivel — se recarga automáticamente al pasar de nivel.
+- **Independiente del escudo y el triple:** puede activarse aunque escudo o disparo triple estén activos (no hay exclusión mutua, a diferencia de esos dos entre sí).
+- El HUD muestra el estado: `SLOWMO LISTO` (disponible), `SLOWMO ACTIVO` (ralentizando) o `SLOWMO —` (agotado este nivel).
+
+El estado vive encapsulado en la clase `Ship` (`slowmoReady`, `slowmoTimer`, `trySlowMo()`), siguiendo el mismo patrón reutilizable que escudo y triple.
