@@ -574,9 +574,9 @@ function drawHUD() {
   drawDivider(260);
 
   ctx.textAlign = 'left';
-  const shieldLabel = ship.shieldActive ? 'ACTIVO' : ship.shieldReady ? 'DISPONIBLE' : '—';
+  const shieldLabel = ship.shieldActive ? 'ACTIVO' : ship.shieldReady ? 'D' : '—';
   const tripleLabel = ship.tripleActive ? 'ACTIVO' : ship.tripleReady ? 'BUSCAR' : '—';
-  const slowmoLabel = ship.slowmoActive ? 'ACTIVO' : ship.slowmoReady ? 'DISPONIBLE' : '—';
+  const slowmoLabel = ship.slowmoActive ? 'ACTIVO' : ship.slowmoReady ? 'S' : '—';
 
   drawPowerStat(280, 'ESCUDO', shieldLabel, '#50c8ff', ship.shieldActive, ship.shieldReady);
   drawDivider(410);
